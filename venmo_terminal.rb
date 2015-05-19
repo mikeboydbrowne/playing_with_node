@@ -29,10 +29,12 @@ def usage (code)
   puts ""
 end
 
+# Get user_id associated with the input access_token
 def get_user_id
   $id = JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/me?access_token=#{$access_token}")))["data"]["user"]["id"]
 end
 
+# Get list of the user's friends
 def get_friend_list
   num_friends = JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/me?access_token=#{$access_token}")))["data"]["user"]["friends_count"]
   $friend_arr = JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/users/#{$id}/friends?access_token=#{$access_token}&limit=#{num_friends}")))["data"]
@@ -42,24 +44,45 @@ def get_friend_list
   end
 end
 
-def calc_levenshtein(name)
+# Find the closest
+def find_closest(name)
+  dist_map = {}
+  min_levenshtein = (2**(0.size * 8 -2) -1)
+
+  # Calc levenshtein dist for all words
   $id_map.each do |full_name, id|
-    puts Levenshtein.distance(name, full_name)
+    dist = Levenshtein.distance(name, full_name)
+    if dist < min_levenshtein
+      min_levenshtein = dist
+    end
+    dist_map.store("#{full_name}", dist)
   end
+
+  # Pick names w/ smallest levenshtein distance and
+  dist_map.each do |k, v|
+    if v > min_levenshtein && !(k.include? name)
+      dist_map.delete(k)
+    end
+  end
+
+  return dist_map
 end
 
+# Display a JSON object of the user's information
 def about_me
   puts ""
   puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/me?access_token=#{$access_token}"))))
   puts ""
 end
 
+# Display a JSON object of the user's friends
 def my_friends
   puts ""
   puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/users/#{$id}/friends?access_token=#{$access_token}"))))
   puts ""
 end
 
+# Charge a user an amount with an associated note
 def charge(amount, id, note)
   uri = URI("https://api.venmo.com/v1/payments")
   params = {'access_token' => $access_token, 'user_id' => id, 'note' => note, 'amount' => amount}
@@ -68,6 +91,7 @@ def charge(amount, id, note)
   puts JSON.pretty_generate(JSON.parse(response.body))
 end
 
+# Pay a user an amount with an associated note
 def pay(amount, id, note)
   uri = URI("https://api.venmo.com/v1/payments")
   params = {'access_token' => $access_token, 'user_id' => id, 'note' => note, 'amount' => amount}
@@ -105,7 +129,7 @@ while true do
     id = $id_map[friend]
     if id.nil?
       # Levenstein distance suggestions
-      calc_levenshtein(friend)
+      find_closest(friend)
       #
     end
     amount = ask "How much do you want to charge " + friend + "?"
