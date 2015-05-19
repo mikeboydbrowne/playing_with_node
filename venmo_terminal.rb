@@ -2,7 +2,12 @@ require "highline/import"
 require 'net/https'
 require 'json'
 
-# Print commands you
+# Global Variables
+#   id => user_id associated with the entered access token
+#   friend_arr => array of friend json variables
+#   id_map
+
+# Print usage commands
 def usage (code)
   if code == 0
     puts ""
@@ -24,6 +29,12 @@ def get_user_id
 end
 
 def get_friend_list
+  num_friends = JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/me?access_token=#{$access_token}")))["data"]["user"]["friends_count"]
+  $friend_arr = JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/users/#{$id}/friends?access_token=#{$access_token}&limit=#{num_friends}")))["data"]
+  $id_map = {}
+  $friend_arr.each do |friend|
+    $id_map.store("#{friend["display_name"]}", "#{friend["id"]}")
+  end
 end
 
 def about_me
@@ -39,16 +50,18 @@ def my_friends
 end
 
 def find_friend(name)
-  return id
+  puts $id_map[name]
+  return $id_map[name]
 end
 
 def charge(amount, id, note)
   uri = URI("https://api.venmo.com/v1/payments")
-  # friendid = "1621210827849728258"
+  # id = 1621210827849728258
   # note = "Test Payment"
   # amount = -1
   params = {'access_token' => $access_token, 'user_id' => id, 'note' => note, 'amount' => amount}
-  puts JSON.pretty_generate(JSON.parse(Net::HTTP.post_form(uri,params)))
+  puts JSON.pretty_generate(params)
+  response = Net::HTTP.post_form(uri,params)
 end
 
 def pay(amount, friend, note)
@@ -67,15 +80,15 @@ usage(0)
 while true do
   input = ask "> "
 
-  # exit the program
+  # Exit the program
   if input == "quit"
     break
 
-  # Get JSON of user attributes
+  # Display JSON of user attributes
   elsif input == "about_me"
     about_me
 
-  # Get JSON of user's friends
+  # Display JSON of user's friends
   elsif input == "my_friends"
     my_friends
 
@@ -85,7 +98,7 @@ while true do
     id = find_friend(friend)
     amount = ask "How much do you want to charge " + friend + "?"
     note = ask "What would you like your charge to say?"
-    charge(amount, friend, note)
+    charge(amount, id, note)
 
   # Pay a friend
   elsif input == "pay"
