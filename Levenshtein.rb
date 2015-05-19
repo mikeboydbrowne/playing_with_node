@@ -1,5 +1,4 @@
 module Levenshtein
-
   def self.distance(a, b)
     a, b = a.downcase, b.downcase
     costs = Array(0..b.length) # i == 0
