@@ -1,6 +1,11 @@
+#!/usr/bin/ruby
+$LOAD_PATH << '.'
+
 require "highline/import"
 require 'net/https'
 require 'json'
+
+require 'Levenshtein.rb'
 
 # Global Variables
 #   id => user_id associated with the entered access token
@@ -37,6 +42,12 @@ def get_friend_list
   end
 end
 
+def calc_levenshtein(name)
+  $id_map.each do |full_name, id|
+    puts Levenshtein.distance(name, full_name)
+  end
+end
+
 def about_me
   puts ""
   puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/me?access_token=#{$access_token}"))))
@@ -49,24 +60,20 @@ def my_friends
   puts ""
 end
 
-def find_friend(name)
-  puts $id_map[name]
-  return $id_map[name]
-end
-
 def charge(amount, id, note)
   uri = URI("https://api.venmo.com/v1/payments")
-  # id = 1621210827849728258
-  # note = "Test Payment"
-  # amount = -1
   params = {'access_token' => $access_token, 'user_id' => id, 'note' => note, 'amount' => amount}
   puts JSON.pretty_generate(params)
   response = Net::HTTP.post_form(uri,params)
+  puts JSON.pretty_generate(JSON.parse(response.body))
 end
 
-def pay(amount, friend, note)
-  puts amount
-  puts friend
+def pay(amount, id, note)
+  uri = URI("https://api.venmo.com/v1/payments")
+  params = {'access_token' => $access_token, 'user_id' => id, 'note' => note, 'amount' => amount}
+  puts JSON.pretty_generate(params)
+  response = Net::HTTP.post_form(uri,params)
+  puts JSON.pretty_generate(JSON.parse(response.body))
 end
 
 # Initialize program with access token, user_id, and friend => user_id mappings
@@ -95,7 +102,12 @@ while true do
   # Charge a friend
   elsif input == "charge"
     friend = ask "Who do you want to charge?"
-    id = find_friend(friend)
+    id = $id_map[friend]
+    if id.nil?
+      # Levenstein distance suggestions
+      calc_levenshtein(friend)
+      #
+    end
     amount = ask "How much do you want to charge " + friend + "?"
     note = ask "What would you like your charge to say?"
     charge(amount, id, note)
