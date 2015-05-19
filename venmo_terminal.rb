@@ -2,10 +2,6 @@ require "highline/import"
 require 'net/https'
 require 'json'
 
-# Get access token for the program
-puts ""
-$access_token = ask "Please input your Venmo access token: "
-
 # Usage function to
 def usage (code)
   if code == 0
@@ -18,16 +14,29 @@ def usage (code)
   puts "about_me    - get a JSON representation of information about the user"
   puts "my_friends  - get a JSON list of this user's friends"
   puts ""
+end
 
+def get_user_info
+
+  $id = JSON.parse(Net::HTTP.get(URI('https://api.venmo.com/v1/me?access_token=' + $access_token)))["data"]["user"]["id"]
+  puts $id
 end
 
 def about_me
   puts ""
-  puts Net::HTTP.get(URI('https://api.venmo.com/v1/me?access_token=' + $access_token))
+  puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI('https://api.venmo.com/v1/me?access_token=' + $access_token))))
 end
 
 def my_friends
+  puts ""
+  puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI('https://api.venmo.com/v1/users/' + $id + '/friends?access_token=' + $access_token))))
 end
+
+
+# Get access token for the program
+puts ""
+$access_token = ask "Please input your Venmo access token: "
+get_user_info
 
 
 # Initial usage message
@@ -41,7 +50,7 @@ while true do
     about_me
     # puts "Executing about_me"
   elsif input == "my_friends"
-    # puts "Executing my_friends"
+    my_friends
   else
     # puts "echo: " + input
   end
