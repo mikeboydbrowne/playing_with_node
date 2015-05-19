@@ -44,6 +44,26 @@ def get_friend_list
   end
 end
 
+# Find the id corresponding to a given username
+def find_friend(friend)
+  id = $id_map[friend]
+  while id.nil?
+    # Levenstein distance suggestions
+    suggestions = find_closest(friend)
+    # Suggesting different names
+    puts "Couldn't find the user you're looking for here are some people with similar names"
+    puts ""
+    suggestions.each do |k, v|
+      puts k
+    end
+    puts ""
+    # Getting new suggestion
+    friend = ask "Who did you want to charge? "
+    id = $id_map[friend]
+  end
+  return friend
+end
+
 # Find the closest
 def find_closest(name)
   dist_map = {}
@@ -84,6 +104,11 @@ end
 
 # Charge a user an amount with an associated note
 def charge(amount, id, note)
+  # Dealing with positive payments
+  if amount.to_i > 0
+    amount = (-amount.to_i).to_s
+  end
+  # Processing payment
   uri = URI("https://api.venmo.com/v1/payments")
   params = {'access_token' => $access_token, 'user_id' => id, 'note' => note, 'amount' => amount}
   puts JSON.pretty_generate(params)
@@ -93,6 +118,11 @@ end
 
 # Pay a user an amount with an associated note
 def pay(amount, id, note)
+  # Dealing with negative payments
+  if amount.to_i < 0
+    amount = (-amount.to_i).to_s
+  end
+  # Processing payment
   uri = URI("https://api.venmo.com/v1/payments")
   params = {'access_token' => $access_token, 'user_id' => id, 'note' => note, 'amount' => amount}
   puts JSON.pretty_generate(params)
@@ -125,24 +155,80 @@ while true do
 
   # Charge a friend
   elsif input == "charge"
-    friend = ask "Who do you want to charge?"
-    id = $id_map[friend]
-    if id.nil?
-      # Levenstein distance suggestions
-      find_closest(friend)
-      #
+    num_friends = ask "Do you want to charge one person or a group? (one/many) "
+    if num_friends == "one"
+      puts ""
+
+      # Dealing with imperfect input
+      friend = ask "Who do you want to charge? "
+      friend = find_friend(friend)
+      id = $id_map[friend]
+
+      # Charging the friend
+      amount = ask "How much do you want to charge " + friend + "? "
+      note = ask "What would you like your charge to say? "
+      charge(amount, id, note)
+
+    elsif num_friends == "many"
+      puts "Please input the group of people you'd like to charge as a comma-delimited list"
+      puts "Example: John Smith, Tommy Sawyer, Mike Browne"
+      puts ""
+      friend_list = ask "Who do you want to charge? "
+      friend_list = friend_list.split(', ')
+      charge_list = {}
+
+      # Getting charge specs for each friend
+      friend_list.each do |friend|
+        friend = find_friend(friend)
+        id = $id_map[friend]
+        amount = ask "How much do you want to charge " + friend + "? "
+        note = ask "What would you like your charge to say? "
+        charge_list.store(note, [id, amount])
+      end
+
+      # Executing each charge
+      charge_list.each do |note, arg|
+        charge(arg[1], arg[0], note)
+      end
     end
-    amount = ask "How much do you want to charge " + friend + "?"
-    note = ask "What would you like your charge to say?"
-    charge(amount, id, note)
 
   # Pay a friend
   elsif input == "pay"
-    friend = ask "Who do you want to pay?"
-    id = find_friend(friend)
-    amount = ask "How much do you want to pay " + friend + "?"
-    note = ask "What would you like your payment to say?"
-    pay(amount, friend, note)
+    num_friends = ask "Do you want to pay one person or a group? (one/many) "
+    if num_friends == "one"
+      puts ""
+
+      # Dealing with imperfect input
+      friend = ask "Who do you want to pay? "
+      friend = find_friend(friend)
+      id = $id_map[friend]
+
+      # Charging the friend
+      amount = ask "How much do you want to pay " + friend + "? "
+      note = ask "What would you like your payment to say? "
+      charge(amount, id, note)
+
+    elsif num_friends == "many"
+      puts "Please input the group of people you'd like to pay as a comma-delimited list"
+      puts "Example: John Smith, Tommy Sawyer, Mike Browne"
+      puts ""
+      friend_list = ask "Who do you want to pay? "
+      friend_list = friend_list.split(', ')
+      charge_list = {}
+
+      # Getting charge specs for each friend
+      friend_list.each do |friend|
+        friend = find_friend(friend)
+        id = $id_map[friend]
+        amount = ask "How much do you want to pay " + friend + "? "
+        note = ask "What would you like your payment to say? "
+        charge_list.store(note, [id, amount])
+      end
+
+      # Executing each charge
+      charge_list.each do |note, arg|
+        charge(arg[1], arg[0], note)
+      end
 
   # Display commands
   elsif input == "help"
