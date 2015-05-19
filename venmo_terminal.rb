@@ -20,18 +20,18 @@ def usage (code)
 end
 
 def get_user_id
-  $id = JSON.parse(Net::HTTP.get(URI('https://api.venmo.com/v1/me?access_token=' + $access_token)))["data"]["user"]["id"]
+  $id = JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/me?access_token=#{$access_token}")))["data"]["user"]["id"]
 end
 
 def about_me
   puts ""
-  puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI('https://api.venmo.com/v1/me?access_token=' + $access_token))))
+  puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/me?access_token=#{$access_token}"))))
   puts ""
 end
 
 def my_friends
   puts ""
-  puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI('https://api.venmo.com/v1/users/' + $id + '/friends?access_token=' + $access_token))))
+  puts JSON.pretty_generate(JSON.parse(Net::HTTP.get(URI("https://api.venmo.com/v1/users/#{$id}/friends?access_token=#{$access_token}"))))
   puts ""
 end
 
